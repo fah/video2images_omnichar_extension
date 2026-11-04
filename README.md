@@ -1,3 +1,7 @@
+** *IN DEVELOPMENT - NOT WORKING* **
+
+** *Do not create bug reports* **
+
 # Video to Images for OmniChar
 
 An Inline Studio extension for extracting image frames from a connected video. It provides one node with three sampling methods:
