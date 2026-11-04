@@ -19,3 +19,7 @@ pip install -e /path/to/OmniChar/core
 pip install av pytest
 PYTHONPATH=python pytest
 ```
+
+Frame numbers are zero-based. Timestamp values must be non-negative and in ascending order. Interval sampling requires a readable video duration.
+
+Inspired by the `UC_SampleVideoFramesAsImages` node in [ComfyUI-UtilsCollection](https://github.com/silveroxides/ComfyUI-UtilsCollection).
