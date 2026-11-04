@@ -75,12 +75,13 @@ def select_nearest_frames(
     if not timestamps:
         raise ValueError("At least one timestamp is required.")
     selected: list[np.ndarray] = []
+    last_selected_index: int | None = None
     targets = iter(timestamps)
     target = next(targets, None)
     previous: tuple[int, float, np.ndarray] | None = None
     last_time = -1.0
     for current in frames:
-        index, timestamp, _image = current
+        _index, timestamp, _image = current
         if timestamp < last_time:
             raise ValueError("Video presentation timestamps are not monotonic.")
         last_time = timestamp
@@ -89,9 +90,9 @@ def select_nearest_frames(
                 chosen = current
             else:
                 chosen = previous
-            if not selected or chosen[0] != getattr(select_nearest_frames, "_last_index", None):
+            if chosen[0] != last_selected_index:
                 selected.append(chosen[2])
-            select_nearest_frames._last_index = chosen[0]  # type: ignore[attr-defined]
+                last_selected_index = chosen[0]
             target = next(targets, None)
         previous = current
     if target is not None:
@@ -172,7 +173,6 @@ class VideoToImages(NodeRunner):
                     interval = float(params["interval_seconds"])
                     if not math.isfinite(interval) or interval <= 0:
                         raise ValueError("Interval must be a finite number greater than zero.")
-                    # The target list is extended from the stream duration when available.
                     duration = float(stream.duration * stream.time_base) if stream.duration and stream.time_base else 0.0
                     if duration <= 0 and container.duration:
                         duration = float(container.duration / 1_000_000)
@@ -184,12 +184,11 @@ class VideoToImages(NodeRunner):
                 wanted = parse_frame_numbers(str(params["frame_numbers"]))
                 wanted_set = set(wanted)
                 selected = []
+                frame_count = 0
                 for index, _timestamp, image in decoded_frames():
+                    frame_count = index + 1
                     if index in wanted_set:
                         selected.append(image)
-                missing = [index for index in wanted if index >= index + 1 and False]
-                # Validate against actual decoded count without retaining unrequested images.
-                frame_count = index + 1 if "index" in locals() else 0
                 missing = [number for number in wanted if number >= frame_count]
                 if missing:
                     raise ValueError(f"Frame number(s) {missing} are outside this video (0-based indexing).")
