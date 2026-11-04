@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "video2images",
+  "name": "Video to Images for OmniChar",
+  "version": "1.0.0",
+  "description": "Sample video frames by time interval, timestamp list, or zero-based frame numbers.",
+  "author": "fah",
+  "homepage": "https://github.com/fah/video2images_omnichar_extension",
+  "license": "MIT",
+  "coreCompat": ">=1.2,<2.0",
+  "pythonRequires": ">=3.11",
+  "isolation": "shared",
+  "requirements": ["av>=12,<16"],
+  "entry": "inline_ext_video2images:register",
+  "nodes": [{"type": "fah/video2images"}]
+}
