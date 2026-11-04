@@ -1,4 +1,4 @@
-"""Parser and timestamp-selection tests for the video sampler."""
+"""Parser, timestamp-selection, and media-wire tests for the video sampler."""
 
 from __future__ import annotations
 
@@ -6,7 +6,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from inline_ext_video2images.sampler import parse_frame_numbers, parse_timestamps, select_nearest_frames
+from inline_ext_video2images.sampler import (
+    _persist_frames,
+    parse_frame_numbers,
+    parse_timestamps,
+    select_nearest_frames,
+)
 
 
 def test_parse_timestamp_values_and_clock_format() -> None:
@@ -42,7 +47,28 @@ def test_nearest_timestamp_selection_rejects_past_end() -> None:
         select_nearest_frames(iter(frames), [2.0])
 
 
-def test_descriptor_and_manifest_node_type_match() -> None:
+def test_persisted_outputs_are_path_refs_usable_by_encode_character() -> None:
+    class Store:
+        def __init__(self) -> None:
+            self.saved: list[tuple[np.ndarray, dict[str, Any]]] = []
+
+        def save(self, run_id: str, node_id: str, image: np.ndarray, params: dict[str, Any]) -> Any:
+            self.saved.append((image, params))
+            return type("Take", (), {"uri": f"/takes/frame-{len(self.saved)}.png"})()
+
+    store = Store()
+    ctx = type("Context", (), {"takes": store, "run_id": "run-1"})()
+    node = type("Node", (), {"id": "sampler-1"})()
+    images = [np.zeros((2, 2, 3), dtype=np.uint8), np.ones((2, 2, 3), dtype=np.uint8)]
+
+    refs = _persist_frames(images, ctx, node, {"strategy": "frames"})
+
+    assert [ref.path for ref in refs] == ["/takes/frame-1.png", "/takes/frame-2.png"]
+    assert all(ref.ref == "path" for ref in refs)
+    assert [params["sample_index"] for _, params in store.saved] == [0, 1]
+
+
+def test_descriptor_matches_manifest_and_is_not_a_generating_take_node() -> None:
     import json
     from pathlib import Path
 
@@ -54,3 +80,5 @@ def test_descriptor_and_manifest_node_type_match() -> None:
     assert {node["type"] for node in manifest["nodes"]} == {
         VideoToImages.__inline_descriptor__.type
     }
+    assert VideoToImages.__inline_descriptor__.output_kind is None
+    assert VideoToImages.produces_takes is False

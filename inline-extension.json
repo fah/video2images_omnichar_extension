@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "video2images",
   "name": "Video to Images for OmniChar",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sample video frames by time interval, timestamp list, or zero-based frame numbers.",
   "author": "fah",
   "homepage": "https://github.com/fah/video2images_omnichar_extension",

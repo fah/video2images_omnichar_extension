@@ -6,7 +6,9 @@ An Inline Studio extension for extracting image frames from a connected video. I
 - **Timestamp list** — enter comma- or semicolon-separated seconds (`0, 1.5, 4`) or timestamps (`00:00:01.500`). Each requested time selects the nearest decoded presentation-timestamp frame.
 - **Frame-number list** — enter zero-based decoded frame numbers (`0, 24, 48`). Frame 0 is the first frame.
 
-The node returns a `Sampled frames` `IMAGE_LIST` for downstream nodes and `First sampled frame` as an image preview. No video or model files are written. Video is decoded locally with PyAV (`av`), using the version already installed by the OmniChar runtime; the extension intentionally does not pin or replace this host dependency.
+The node returns a `Sampled frames` `IMAGE_LIST` for downstream nodes and `First sampled frame` as an image. Each output is a disk-backed image reference (`AssetRef` with a local path), the format expected by OmniChar's **Encode Character** node. The pixel arrays are saved as PNGs in the engine's take store and are never passed downstream as filename strings. The node is a graph utility rather than a render target, so it does not create its own generation take history.
+
+Video is decoded locally with PyAV (`av`), using the version already installed by the OmniChar runtime; the extension intentionally does not pin or replace this host dependency.
 
 ## Install
 

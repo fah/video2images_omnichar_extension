@@ -13,7 +13,6 @@ from inline_core.extensions.api import inline_node
 from inline_core.graph.descriptor import Option, ParamField, Port, Widget
 from inline_core.graph.runners import NodeResult, NodeRunner
 from inline_core.graph.schema import PortKind
-from inline_core.media import MediaKind
 from inline_core.takes import AssetRef
 
 
@@ -114,12 +113,22 @@ def _video_path(video: Any) -> str:
     return str(path)
 
 
+def _persist_frames(frames: list[np.ndarray], ctx: Any, node: Any, params: dict[str, Any]) -> list[AssetRef]:
+    """Persist sampled images and pass downstream file references, never pixel arrays as paths."""
+    if ctx.takes is None:
+        raise ValueError("The video sampler needs an image take store to pass frames downstream.")
+    refs: list[AssetRef] = []
+    for index, image in enumerate(frames):
+        take = ctx.takes.save(ctx.run_id, node.id, image, {**params, "sample_index": index})
+        refs.append(AssetRef(ref="path", path=take.uri))
+    return refs
+
+
 @inline_node(
     type="fah/video2images",
     title="Video to Images",
     category="Image / Video",
     icon="image",
-    output_kind=MediaKind.IMAGE,
     inputs=(Port("video", "Video", PortKind.VIDEO, required=True),),
     outputs=(
         Port("frames", "Sampled frames", PortKind.IMAGE_LIST),
@@ -133,9 +142,9 @@ def _video_path(video: Any) -> str:
     ),
 )
 class VideoToImages(NodeRunner):
-    """Sample a video and return both an IMAGE_LIST and its first image as a preview."""
+    """Sample a video and return disk-backed image references for downstream nodes."""
 
-    produces_takes = True
+    produces_takes = False
 
     def run(self, node: Any, inputs: dict[str, list[Any]], ctx: Any) -> NodeResult:
         from av import open as av_open
@@ -197,10 +206,5 @@ class VideoToImages(NodeRunner):
             else:
                 raise ValueError(f"Unknown sampling method: {strategy!r}.")
 
-        first = selected[0]
-        if ctx.takes is not None:
-            take = ctx.takes.save(ctx.run_id, node.id, first, params)
-            takes = [take]
-        else:
-            takes = []
-        return NodeResult(outputs={"frames": selected, "first_frame": first}, takes=takes)
+        refs = _persist_frames(selected, ctx, node, params)
+        return NodeResult(outputs={"frames": refs, "first_frame": refs[0]})
